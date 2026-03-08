@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useChainId } from 'wagmi';
 import { parseUnits, formatUnits } from '@/lib/utils/units';
@@ -31,9 +31,9 @@ interface TokenData {
  * - 交易状态追踪
  * - 滑点设置
  */
-export default function SwapPage(): JSX.Element {
+export default function SwapPage(): React.ReactElement {
   // 获取钱包连接状态和当前链ID
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const chainId = useChainId();
 
   // ===== 状态管理 =====
@@ -41,7 +41,6 @@ export default function SwapPage(): JSX.Element {
   const [tokenOut, setTokenOut] = useState<string>('TKB');
   const [amountIn, setAmountIn] = useState<string>('');
   const [amountOut, setAmountOut] = useState<string>('');
-  const [isLoadingQuote, setIsLoadingQuote] = useState<boolean>(false);
   const [isMockMode, setIsMockMode] = useState<boolean>(false);
 
   // 滑点设置
@@ -49,15 +48,17 @@ export default function SwapPage(): JSX.Element {
   const [showSlippageModal, setShowSlippageModal] = useState<boolean>(false);
   const [customSlippage, setCustomSlippage] = useState<string>('');
 
-  // 获取代币数据
-  const tokenInData: TokenData = {
+  // 获取代币数据 - 使用 useMemo 避免重复创建对象
+  const tokenInData: TokenData = useMemo(() => ({
     ...TOKENS[tokenIn],
     address: getTokenAddress(chainId, tokenIn) as `0x${string}` | undefined,
-  };
-  const tokenOutData: TokenData = {
+  }), [chainId, tokenIn]);
+
+  const tokenOutData: TokenData = useMemo(() => ({
     ...TOKENS[tokenOut],
     address: getTokenAddress(chainId, tokenOut) as `0x${string}` | undefined,
-  };
+  }), [chainId, tokenOut]);
+
   const swapAddress = getProtocolAddress(chainId, 'SWAP') as `0x${string}` | undefined;
 
   // ===== 合约读取 =====
@@ -66,7 +67,9 @@ export default function SwapPage(): JSX.Element {
     address: swapAddress,
     abi: SWAP_ABI,
     functionName: 'getReserves',
-    enabled: Boolean(swapAddress),
+    query: {
+      enabled: Boolean(swapAddress),
+    },
   });
 
   // 从链上获取报价
@@ -77,7 +80,9 @@ export default function SwapPage(): JSX.Element {
     args: amountIn && tokenInData.address
       ? [tokenInData.address, parseUnits(amountIn, tokenInData.decimals)]
       : undefined,
-    enabled: Boolean(swapAddress && amountIn && parseFloat(amountIn) > 0),
+    query: {
+      enabled: Boolean(swapAddress && amountIn && parseFloat(amountIn) > 0),
+    },
   });
 
   // ===== 合约写入 =====
@@ -91,19 +96,16 @@ export default function SwapPage(): JSX.Element {
 
   // ===== 报价计算 =====
   useEffect(() => {
-    const getQuote = async (): Promise<void> => {
+    const getQuote = (): void => {
       if (!amountIn || parseFloat(amountIn) <= 0) {
         setAmountOut('');
         return;
       }
 
-      setIsLoadingQuote(true);
-
       // 优先使用链上报价
       if (chainQuote && !isQuoteError) {
-        setAmountOut(formatUnits(chainQuote, tokenOutData.decimals));
+        setAmountOut(formatUnits(chainQuote as bigint, tokenOutData.decimals));
         setIsMockMode(false);
-        setIsLoadingQuote(false);
         return;
       }
 
@@ -118,14 +120,12 @@ export default function SwapPage(): JSX.Element {
         console.error('获取报价错误:', error);
         setAmountOut('');
       }
-
-      setIsLoadingQuote(false);
     };
 
     // 防抖处理
     const timer = setTimeout(getQuote, 500);
     return () => clearTimeout(timer);
-  }, [amountIn, chainQuote, isQuoteError, tokenIn, tokenInData, tokenOutData]);
+  }, [amountIn, chainQuote, isQuoteError, tokenIn, tokenOutData.decimals]);
 
   /**
    * 执行兑换
@@ -213,7 +213,7 @@ export default function SwapPage(): JSX.Element {
               title="设置"
             >
               <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 001.066-2.572c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
@@ -281,7 +281,7 @@ export default function SwapPage(): JSX.Element {
                 onChange={(e) => setTokenOut(e.target.value)}
                 className="bg-white border rounded-lg px-3 py-2 font-semibold"
               >
-                {Object.keys(TOKENS).filter(s => s !== tokenIn).map((symbol) => (
+                {Object.keys(TOKENS).filter((s) => s !== tokenIn).map((symbol) => (
                   <option key={symbol} value={symbol}>
                     {symbol}
                   </option>
@@ -301,22 +301,22 @@ export default function SwapPage(): JSX.Element {
                   1 {tokenIn} = {(parseFloat(amountOut) / parseFloat(amountIn)).toFixed(4)} {tokenOut}
                 </span>
               </div>
-              {reserves && (
-                <>
+              {reserves && Array.isArray(reserves) && reserves.length >= 2 ? (
+                <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">流动性</span>
                     <span className="font-semibold">
-                      ${((Number((reserves as bigint[])[0]) + Number((reserves as bigint[])[1])) / 1e18 * 1.5).toFixed(2)}
+                      ${((Number(reserves[0]) + Number(reserves[1])) / 1e18 * 1.5).toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-sm mt-2">
                     <span className="text-gray-600">价格影响</span>
                     <span className={`font-semibold ${parseFloat(priceImpact) > 5 ? 'text-red-600' : parseFloat(priceImpact) > 2 ? 'text-yellow-600' : 'text-green-600'}`}>
                       {priceImpact}%
                     </span>
                   </div>
-                </>
-              )}
+                </div>
+              ) : null}
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">滑点容差</span>
                 <span className="font-semibold">{slippage}%</span>
@@ -351,7 +351,7 @@ export default function SwapPage(): JSX.Element {
           <ApproveButton
             tokenAddress={tokenInData?.address}
             spenderAddress={swapAddress}
-            amount={amountIn ? parseUnits(amountIn, tokenInData.decimals) : 0n}
+            amount={amountIn ? parseUnits(amountIn, tokenInData.decimals) : BigInt(0)}
             onApproved={handleApproved}
             disabled={!amountIn || !amountOut || isSwapping || isConfirming}
           >

@@ -3,10 +3,10 @@
  * 提供网站主要导航功能和钱包连接按钮
  */
 
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import Link from "next/link";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 // 导航项配置接口
 interface NavItem {
@@ -18,14 +18,14 @@ interface NavItem {
  * 导航栏组件
  * 包含品牌Logo、导航链接和钱包连接按钮
  */
-export default function Navbar(): JSX.Element {
+export default function Navbar(): React.ReactElement {
   // 导航菜单项配置
   const navItems: NavItem[] = [
-    { name: 'LaunchPad', href: '/launchpad' },
-    { name: 'Bridge', href: '/bridge' },
-    { name: 'Swap', href: '/swap' },
-    { name: 'Pool', href: '/pool' },
-    { name: 'Farm', href: '/farm' },
+    { name: "LaunchPad", href: "/launchpad" },
+    { name: "Bridge", href: "/bridge" },
+    { name: "Swap", href: "/swap" },
+    { name: "Pool", href: "/pool" },
+    { name: "Farm", href: "/farm" },
   ];
 
   return (

@@ -32,7 +32,7 @@ interface ClientProvidersProps {
  * - Navbar: 导航栏
  * - ErrorFilter: 错误过滤器
  */
-export default function ClientProviders({ children }: ClientProvidersProps): JSX.Element {
+export default function ClientProviders({ children }: ClientProvidersProps): React.ReactElement {
   // 创建 QueryClient 实例（每个会话一个）
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {

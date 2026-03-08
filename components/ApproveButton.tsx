@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useMemo, ReactNode, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ERC20_ABI } from '@/lib/abis';
 
@@ -42,12 +42,9 @@ export default function ApproveButton({
   onApproved,
   children,
   disabled = false,
-}: ApproveButtonProps): JSX.Element {
+}: ApproveButtonProps): React.ReactElement {
   // 获取当前连接的钱包地址
   const { address } = useAccount();
-  
-  // 是否需要授权的状态
-  const [needsApproval, setNeedsApproval] = useState<boolean>(false);
 
   // 读取当前授权额度
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -55,7 +52,9 @@ export default function ApproveButton({
     abi: ERC20_ABI,
     functionName: 'allowance',
     args: address && spenderAddress ? [address, spenderAddress] : undefined,
-    enabled: Boolean(address && tokenAddress && spenderAddress && amount),
+    query: {
+      enabled: Boolean(address && tokenAddress && spenderAddress && amount),
+    },
   });
 
   // 授权交易写入
@@ -66,19 +65,16 @@ export default function ApproveButton({
     hash: approveHash,
   });
 
-  // 检查是否需要授权
-  useEffect(() => {
-    // 如果数据未加载或金额未设置
+  // 计算是否需要授权
+  const needsApproval = useMemo(() => {
     if (amount === undefined || amount === null || allowance === undefined || allowance === null) {
-      setNeedsApproval(false);
-      return;
+      return false;
     }
 
     const amountBig = typeof amount === 'bigint' ? amount : BigInt(amount || 0);
-    const allowanceBig = BigInt(allowance);
+    const allowanceBig = typeof allowance === 'bigint' ? allowance : BigInt(String(allowance));
 
-    // 如果授权额度小于所需金额，则需要授权
-    setNeedsApproval(allowanceBig < amountBig);
+    return allowanceBig < amountBig;
   }, [amount, allowance]);
 
   // 授权成功后刷新授权额度

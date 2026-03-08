@@ -10,7 +10,7 @@
  * @returns {bigint} wei 单位的金额
  */
 export function parseUnits(amount: string | number, decimals: number = 18): bigint {
-  if (!amount || amount === '' || amount === '0') return 0n;
+  if (!amount || amount === '' || amount === '0') return BigInt(0);
 
   const amountStr = amount.toString();
   const [whole, fraction = ''] = amountStr.split('.');
@@ -32,7 +32,7 @@ export function parseUnits(amount: string | number, decimals: number = 18): bigi
  * @returns {string} 人类可读的金额
  */
 export function formatUnits(value: bigint | string, decimals: number = 18, displayDecimals: number = 4): string {
-  if (!value || value === 0n || value === '0') return '0';
+  if (!value || value === BigInt(0) || value === '0') return '0';
 
   const valueStr = value.toString().padStart(decimals + 1, '0');
   const whole = valueStr.slice(0, -decimals) || '0';
@@ -85,12 +85,12 @@ export function formatUSD(value: number | string): string {
  * @returns {number} 百分比 (0-100)
  */
 export function calculatePercentage(part: bigint | string, total: bigint | string): number {
-  if (!total || total === 0n || total === '0') return 0;
+  if (!total || total === BigInt(0) || total === '0') return 0;
 
   const partBig = typeof part === 'bigint' ? part : BigInt(part);
   const totalBig = typeof total === 'bigint' ? total : BigInt(total);
 
-  return Number((partBig * 10000n) / totalBig) / 100;
+  return Number((partBig * BigInt(10000)) / totalBig) / 100;
 }
 
 /**
@@ -114,5 +114,5 @@ export function addBigInt(a: bigint | string, b: bigint | string): bigint {
 export function multiplyBigInt(value: bigint | string, multiplier: number): bigint {
   const valueBig = typeof value === 'bigint' ? value : BigInt(value || 0);
   const multiplierBig = BigInt(Math.floor(multiplier * 10000));
-  return (valueBig * multiplierBig) / 10000n;
+  return (valueBig * multiplierBig) / BigInt(10000);
 }

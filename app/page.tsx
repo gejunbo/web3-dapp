@@ -18,7 +18,7 @@ interface FeatureCard {
  * 首页组件
  * 展示 DeFi DApp 的主要功能入口
  */
-export default function Home(): JSX.Element {
+export default function Home(): React.ReactElement {
   // 功能模块配置
   const features: FeatureCard[] = [
     {

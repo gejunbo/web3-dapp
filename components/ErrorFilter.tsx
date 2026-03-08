@@ -11,7 +11,7 @@ import { useEffect } from 'react';
  * 错误过滤器组件
  * 用于过滤 WalletConnect 等库产生的噪声错误，保持控制台清洁
  */
-export default function ErrorFilter(): null {
+export default function ErrorFilter(): React.ReactElement | null {
   useEffect(() => {
     // 保存原始的 console.error 函数
     const originalError = console.error;
@@ -60,7 +60,7 @@ export default function ErrorFilter(): null {
         ) {
           return;
         }
-      } catch (e) {
+      } catch {
         // 如果无法获取调用栈，继续
       }
 
@@ -88,7 +88,7 @@ export default function ErrorFilter(): null {
           errorString === '';
 
         if (shouldFilter) return;
-      } catch (e) {
+      } catch {
         // 如果字符串转换失败，继续
       }
 
