@@ -6,10 +6,11 @@
 import { http, createConfig } from "wagmi";
 import { sepolia, mainnet } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { walletConnect } from "wagmi/connectors";
 
 // 自定义 Anvil 本地链配置
-const anvil = {
+import type { Chain } from "wagmi/chains";
+
+const anvil: Chain = {
   id: 31337,
   name: "Anvil",
   nativeCurrency: {
@@ -19,10 +20,10 @@ const anvil = {
   },
   rpcUrls: {
     default: {
-      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL],
+      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL as string],
     },
     public: {
-      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL],
+      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL as string],
     },
   },
   testnet: true,
@@ -36,18 +37,10 @@ export const config = createConfig({
   chains: [sepolia, anvil, mainnet],
   connectors: [
     injected(), // MetaMask, Coinbase Wallet 等浏览器钱包
-    walletConnect({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
-      showQrModal: true,
-      qrModalOptions: {
-        themeMode: "light",
-      },
-      disableProviderPing: true,
-    }),
   ],
   transports: {
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA),
-    [anvil.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ANVIL),
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA as string),
+    [anvil.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ANVIL as string),
     [mainnet.id]: http(),
   },
   ssr: true,
