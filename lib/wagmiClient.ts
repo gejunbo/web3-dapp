@@ -3,26 +3,26 @@
  * 配置 Web3 连接、链和钱包连接器
  */
 
-import { http, createConfig } from 'wagmi';
-import { sepolia, mainnet } from 'wagmi/chains';
-import { injected } from 'wagmi/connectors';
-import { walletConnect } from 'wagmi/connectors';
+import { http, createConfig } from "wagmi";
+import { sepolia, mainnet } from "wagmi/chains";
+import { injected } from "wagmi/connectors";
+import { walletConnect } from "wagmi/connectors";
 
 // 自定义 Anvil 本地链配置
 const anvil = {
   id: 31337,
-  name: 'Anvil',
+  name: "Anvil",
   nativeCurrency: {
     decimals: 18,
-    name: 'Ether',
-    symbol: 'ETH',
+    name: "Ether",
+    symbol: "ETH",
   },
   rpcUrls: {
     default: {
-      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL || 'http://127.0.0.1:8545'],
+      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL],
     },
     public: {
-      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL || 'http://127.0.0.1:8545'],
+      http: [process.env.NEXT_PUBLIC_RPC_URL_ANVIL],
     },
   },
   testnet: true,
@@ -37,17 +37,17 @@ export const config = createConfig({
   connectors: [
     injected(), // MetaMask, Coinbase Wallet 等浏览器钱包
     walletConnect({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
       showQrModal: true,
       qrModalOptions: {
-        themeMode: 'light',
+        themeMode: "light",
       },
       disableProviderPing: true,
     }),
   ],
   transports: {
     [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA),
-    [anvil.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ANVIL || 'http://127.0.0.1:8545'),
+    [anvil.id]: http(process.env.NEXT_PUBLIC_RPC_URL_ANVIL),
     [mainnet.id]: http(),
   },
   ssr: true,

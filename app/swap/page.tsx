@@ -3,15 +3,24 @@
  * 代币兑换功能页面，支持 TokenA 和 TokenB 之间的兑换
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { useChainId } from 'wagmi';
-import { parseUnits, formatUnits } from '@/lib/utils/units';
-import ApproveButton from '@/components/ApproveButton';
-import { TOKENS, getTokenAddress, getProtocolAddress } from '@/lib/constants/addresses';
-import { SWAP_ABI } from '@/lib/abis';
+import { useState, useEffect, useMemo } from "react";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { useChainId, useConnect } from "wagmi";
+import { parseUnits, formatUnits } from "@/lib/utils/units";
+import ApproveButton from "@/components/ApproveButton";
+import {
+  TOKENS,
+  getTokenAddress,
+  getProtocolAddress,
+} from "@/lib/constants/addresses";
+import { SWAP_ABI } from "@/lib/abis";
 
 // 代币数据接口
 interface TokenData {
@@ -34,39 +43,61 @@ interface TokenData {
 export default function SwapPage(): React.ReactElement {
   // 获取钱包连接状态和当前链ID
   const { isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
   const chainId = useChainId();
 
+  /**
+   * 处理连接钱包
+   * 优先使用 injected 连接器（MetaMask 等），如果没有则使用第一个可用连接器
+   */
+  const handleConnectWallet = (): void => {
+    const injectedConnector = connectors.find((c) => c.id === "injected");
+    if (injectedConnector) {
+      connect({ connector: injectedConnector });
+    } else if (connectors.length > 0) {
+      connect({ connector: connectors[0] });
+    }
+  };
+
   // ===== 状态管理 =====
-  const [tokenIn, setTokenIn] = useState<string>('TKA');
-  const [tokenOut, setTokenOut] = useState<string>('TKB');
-  const [amountIn, setAmountIn] = useState<string>('');
-  const [amountOut, setAmountOut] = useState<string>('');
+  const [tokenIn, setTokenIn] = useState<string>("TKA");
+  const [tokenOut, setTokenOut] = useState<string>("TKB");
+  const [amountIn, setAmountIn] = useState<string>("");
+  const [amountOut, setAmountOut] = useState<string>("");
   const [isMockMode, setIsMockMode] = useState<boolean>(false);
 
   // 滑点设置
   const [slippage, setSlippage] = useState<number>(0.5); // 默认 0.5%
   const [showSlippageModal, setShowSlippageModal] = useState<boolean>(false);
-  const [customSlippage, setCustomSlippage] = useState<string>('');
+  const [customSlippage, setCustomSlippage] = useState<string>("");
 
   // 获取代币数据 - 使用 useMemo 避免重复创建对象
-  const tokenInData: TokenData = useMemo(() => ({
-    ...TOKENS[tokenIn],
-    address: getTokenAddress(chainId, tokenIn) as `0x${string}` | undefined,
-  }), [chainId, tokenIn]);
+  const tokenInData: TokenData = useMemo(
+    () => ({
+      ...TOKENS[tokenIn],
+      address: getTokenAddress(chainId, tokenIn) as `0x${string}` | undefined,
+    }),
+    [chainId, tokenIn],
+  );
 
-  const tokenOutData: TokenData = useMemo(() => ({
-    ...TOKENS[tokenOut],
-    address: getTokenAddress(chainId, tokenOut) as `0x${string}` | undefined,
-  }), [chainId, tokenOut]);
+  const tokenOutData: TokenData = useMemo(
+    () => ({
+      ...TOKENS[tokenOut],
+      address: getTokenAddress(chainId, tokenOut) as `0x${string}` | undefined,
+    }),
+    [chainId, tokenOut],
+  );
 
-  const swapAddress = getProtocolAddress(chainId, 'SWAP') as `0x${string}` | undefined;
+  const swapAddress = getProtocolAddress(chainId, "SWAP") as
+    | `0x${string}`
+    | undefined;
 
   // ===== 合约读取 =====
   // 读取流动性池储备量
   const { data: reserves } = useReadContract({
     address: swapAddress,
     abi: SWAP_ABI,
-    functionName: 'getReserves',
+    functionName: "getReserves",
     query: {
       enabled: Boolean(swapAddress),
     },
@@ -76,10 +107,11 @@ export default function SwapPage(): React.ReactElement {
   const { data: chainQuote, isError: isQuoteError } = useReadContract({
     address: swapAddress,
     abi: SWAP_ABI,
-    functionName: 'getAmountOut',
-    args: amountIn && tokenInData.address
-      ? [tokenInData.address, parseUnits(amountIn, tokenInData.decimals)]
-      : undefined,
+    functionName: "getAmountOut",
+    args:
+      amountIn && tokenInData.address
+        ? [tokenInData.address, parseUnits(amountIn, tokenInData.decimals)]
+        : undefined,
     query: {
       enabled: Boolean(swapAddress && amountIn && parseFloat(amountIn) > 0),
     },
@@ -87,18 +119,23 @@ export default function SwapPage(): React.ReactElement {
 
   // ===== 合约写入 =====
   // 兑换交易
-  const { data: swapHash, writeContract: swap, isPending: isSwapping } = useWriteContract();
+  const {
+    data: swapHash,
+    writeContract: swap,
+    isPending: isSwapping,
+  } = useWriteContract();
 
   // 等待交易确认
-  const { isLoading: isConfirming, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
-    hash: swapHash,
-  });
+  const { isLoading: isConfirming, isSuccess: isSwapSuccess } =
+    useWaitForTransactionReceipt({
+      hash: swapHash,
+    });
 
   // ===== 报价计算 =====
   useEffect(() => {
     const getQuote = (): void => {
       if (!amountIn || parseFloat(amountIn) <= 0) {
-        setAmountOut('');
+        setAmountOut("");
         return;
       }
 
@@ -112,13 +149,13 @@ export default function SwapPage(): React.ReactElement {
       // 链上报价失败，使用模拟计算
       try {
         // 模拟汇率：1:1.5
-        const mockRate = tokenIn === 'TKA' ? 1.5 : (1 / 1.5);
+        const mockRate = tokenIn === "TKA" ? 1.5 : 1 / 1.5;
         const calculatedOut = parseFloat(amountIn) * mockRate;
         setAmountOut(calculatedOut.toFixed(6));
         setIsMockMode(true);
       } catch (error) {
-        console.error('获取报价错误:', error);
-        setAmountOut('');
+        console.error("获取报价错误:", error);
+        setAmountOut("");
       }
     };
 
@@ -138,7 +175,7 @@ export default function SwapPage(): React.ReactElement {
     swap({
       address: swapAddress,
       abi: SWAP_ABI,
-      functionName: 'swap',
+      functionName: "swap",
       args: [tokenInData.address, amountInWei],
     });
   };
@@ -150,25 +187,31 @@ export default function SwapPage(): React.ReactElement {
     setTokenIn(tokenOut);
     setTokenOut(tokenIn);
     setAmountIn(amountOut);
-    setAmountOut('');
+    setAmountOut("");
   };
 
   /**
    * 授权成功回调
    */
   const handleApproved = (): void => {
-    console.log('代币已授权，准备兑换');
+    console.log("代币已授权，准备兑换");
   };
 
   // 计算最小输出金额（考虑滑点）
   const minAmountOut = amountOut
     ? (parseFloat(amountOut) * (1 - slippage / 100)).toFixed(6)
-    : '0';
+    : "0";
 
   // 计算价格影响（简化版）
-  const priceImpact = reserves && amountIn
-    ? ((parseFloat(amountIn) / (Number((reserves as bigint[])[tokenIn === 'TKA' ? 0 : 1]) / 1e18)) * 100).toFixed(2)
-    : '0';
+  const priceImpact =
+    reserves && amountIn
+      ? (
+          (parseFloat(amountIn) /
+            (Number((reserves as bigint[])[tokenIn === "TKA" ? 0 : 1]) /
+              1e18)) *
+          100
+        ).toFixed(2)
+      : "0";
 
   // 滑点预设值
   const slippagePresets: number[] = [0.1, 0.5, 1.0];
@@ -178,7 +221,7 @@ export default function SwapPage(): React.ReactElement {
    */
   const handleSlippagePreset = (value: number): void => {
     setSlippage(value);
-    setCustomSlippage('');
+    setCustomSlippage("");
   };
 
   /**
@@ -212,9 +255,24 @@ export default function SwapPage(): React.ReactElement {
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               title="设置"
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 001.066-2.572c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 001.066-2.572c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
             </button>
           </div>
@@ -256,8 +314,18 @@ export default function SwapPage(): React.ReactElement {
             onClick={switchTokens}
             className="bg-white border-4 border-gray-50 rounded-xl p-2 hover:bg-gray-50 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+              />
             </svg>
           </button>
         </div>
@@ -281,11 +349,13 @@ export default function SwapPage(): React.ReactElement {
                 onChange={(e) => setTokenOut(e.target.value)}
                 className="bg-white border rounded-lg px-3 py-2 font-semibold"
               >
-                {Object.keys(TOKENS).filter((s) => s !== tokenIn).map((symbol) => (
-                  <option key={symbol} value={symbol}>
-                    {symbol}
-                  </option>
-                ))}
+                {Object.keys(TOKENS)
+                  .filter((s) => s !== tokenIn)
+                  .map((symbol) => (
+                    <option key={symbol} value={symbol}>
+                      {symbol}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
@@ -298,7 +368,9 @@ export default function SwapPage(): React.ReactElement {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">汇率</span>
                 <span className="font-semibold">
-                  1 {tokenIn} = {(parseFloat(amountOut) / parseFloat(amountIn)).toFixed(4)} {tokenOut}
+                  1 {tokenIn} ={" "}
+                  {(parseFloat(amountOut) / parseFloat(amountIn)).toFixed(4)}{" "}
+                  {tokenOut}
                 </span>
               </div>
               {reserves && Array.isArray(reserves) && reserves.length >= 2 ? (
@@ -306,12 +378,18 @@ export default function SwapPage(): React.ReactElement {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">流动性</span>
                     <span className="font-semibold">
-                      ${((Number(reserves[0]) + Number(reserves[1])) / 1e18 * 1.5).toFixed(2)}
+                      $
+                      {(
+                        ((Number(reserves[0]) + Number(reserves[1])) / 1e18) *
+                        1.5
+                      ).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm mt-2">
                     <span className="text-gray-600">价格影响</span>
-                    <span className={`font-semibold ${parseFloat(priceImpact) > 5 ? 'text-red-600' : parseFloat(priceImpact) > 2 ? 'text-yellow-600' : 'text-green-600'}`}>
+                    <span
+                      className={`font-semibold ${parseFloat(priceImpact) > 5 ? "text-red-600" : parseFloat(priceImpact) > 2 ? "text-yellow-600" : "text-green-600"}`}
+                    >
                       {priceImpact}%
                     </span>
                   </div>
@@ -323,13 +401,17 @@ export default function SwapPage(): React.ReactElement {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">最少收到</span>
-                <span className="font-semibold">{minAmountOut} {tokenOut}</span>
+                <span className="font-semibold">
+                  {minAmountOut} {tokenOut}
+                </span>
               </div>
             </div>
             {/* 高价格影响警告 */}
             {parseFloat(priceImpact) > 5 && (
               <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-xs text-red-800">⚠️ 价格影响较高！建议减少兑换金额。</p>
+                <p className="text-xs text-red-800">
+                  ⚠️ 价格影响较高！建议减少兑换金额。
+                </p>
               </div>
             )}
           </div>
@@ -337,7 +419,10 @@ export default function SwapPage(): React.ReactElement {
 
         {/* 操作按钮 */}
         {!isConnected ? (
-          <button className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg">
+          <button
+            onClick={handleConnectWallet}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
             连接钱包
           </button>
         ) : !swapAddress || isMockMode ? (
@@ -345,13 +430,15 @@ export default function SwapPage(): React.ReactElement {
             disabled
             className="w-full bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg cursor-not-allowed"
           >
-            {isMockMode ? '兑换（模拟模式 - 合约未部署）' : '兑换合约不可用'}
+            {isMockMode ? "兑换（模拟模式 - 合约未部署）" : "兑换合约不可用"}
           </button>
         ) : (
           <ApproveButton
             tokenAddress={tokenInData?.address}
             spenderAddress={swapAddress}
-            amount={amountIn ? parseUnits(amountIn, tokenInData.decimals) : BigInt(0)}
+            amount={
+              amountIn ? parseUnits(amountIn, tokenInData.decimals) : BigInt(0)
+            }
             onApproved={handleApproved}
             disabled={!amountIn || !amountOut || isSwapping || isConfirming}
           >
@@ -360,7 +447,7 @@ export default function SwapPage(): React.ReactElement {
               disabled={!amountIn || !amountOut || isSwapping || isConfirming}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              {isSwapping || isConfirming ? '兑换中...' : '兑换'}
+              {isSwapping || isConfirming ? "兑换中..." : "兑换"}
             </button>
           </ApproveButton>
         )}
@@ -402,15 +489,27 @@ export default function SwapPage(): React.ReactElement {
                 onClick={() => setShowSlippageModal(false)}
                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-3">滑点容差</label>
+                <label className="block text-sm font-semibold mb-3">
+                  滑点容差
+                </label>
                 <div className="flex gap-2 mb-3">
                   {slippagePresets.map((preset) => (
                     <button
@@ -418,8 +517,8 @@ export default function SwapPage(): React.ReactElement {
                       onClick={() => handleSlippagePreset(preset)}
                       className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
                         slippage === preset && !customSlippage
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       {preset}%
@@ -437,14 +536,20 @@ export default function SwapPage(): React.ReactElement {
                     max="50"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
-                  <span className="absolute right-3 top-2 text-gray-500">%</span>
+                  <span className="absolute right-3 top-2 text-gray-500">
+                    %
+                  </span>
                 </div>
                 {/* 高滑点警告 */}
                 {customSlippage && parseFloat(customSlippage) > 5 && (
-                  <p className="mt-2 text-sm text-yellow-600">⚠️ 高滑点可能导致不利汇率</p>
+                  <p className="mt-2 text-sm text-yellow-600">
+                    ⚠️ 高滑点可能导致不利汇率
+                  </p>
                 )}
                 {customSlippage && parseFloat(customSlippage) > 15 && (
-                  <p className="mt-2 text-sm text-red-600">⚠️ 滑点非常高！可能会损失大量价值。</p>
+                  <p className="mt-2 text-sm text-red-600">
+                    ⚠️ 滑点非常高！可能会损失大量价值。
+                  </p>
                 )}
               </div>
 
