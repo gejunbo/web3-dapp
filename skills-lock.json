@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "react-web": {
+      "source": "alinaqi/claude-bootstrap",
+      "sourceType": "github",
+      "computedHash": "c19bea2ea2ecb005a36e139ba7bf8a74e631f26f02368037fe767d93063a7568"
+    }
+  }
+}
