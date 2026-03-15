@@ -1,11 +1,11 @@
 ---
 name: react-web
-description: React web development with hooks, React Query, Zustand
+description: React web development with hooks, React Query, Zustand; 适用于所有 React 和 Next.js 前端开发任务。强制执行测试优先原则、使用函数式组件和 Hooks、遵循 Zustand 状态管理规范。当用户请求开发新组件、页面或功能时，应自动调用本技能。
 ---
 
 # React Web Skill
 
-*Load with: base.md + typescript.md*
+_Load with: base.md + typescript.md_
 
 ---
 
@@ -89,28 +89,28 @@ describe('Button', () => {
 
 ```typescript
 // useCounter.test.ts - CREATE THIS FIRST
-import { renderHook, act } from '@testing-library/react';
-import { useCounter } from './useCounter';
+import { renderHook, act } from "@testing-library/react";
+import { useCounter } from "./useCounter";
 
-describe('useCounter', () => {
-  it('starts at initial value', () => {
+describe("useCounter", () => {
+  it("starts at initial value", () => {
     const { result } = renderHook(() => useCounter(5));
     expect(result.current.count).toBe(5);
   });
 
-  it('increments', () => {
+  it("increments", () => {
     const { result } = renderHook(() => useCounter());
     act(() => result.current.increment());
     expect(result.current.count).toBe(1);
   });
 
-  it('decrements', () => {
+  it("decrements", () => {
     const { result } = renderHook(() => useCounter(5));
     act(() => result.current.decrement());
     expect(result.current.count).toBe(4);
   });
 
-  it('resets to initial value', () => {
+  it("resets to initial value", () => {
     const { result } = renderHook(() => useCounter(10));
     act(() => result.current.increment());
     act(() => result.current.reset());
@@ -129,6 +129,7 @@ Before writing ANY component/hook implementation:
 - [ ] Only THEN create implementation file
 
 **If tests are skipped, Claude MUST:**
+
 ```
 ⚠️ TEST-FIRST VIOLATION
 
@@ -185,6 +186,7 @@ project/
 ## Component Patterns
 
 ### Functional Components Only
+
 ```typescript
 // Good - simple, testable
 interface ButtonProps {
@@ -213,6 +215,7 @@ export function Button({
 ```
 
 ### Extract Logic to Hooks
+
 ```typescript
 // useHome.ts - all logic here
 export function useHome() {
@@ -244,6 +247,7 @@ export function HomePage(): JSX.Element {
 ```
 
 ### Props Interface Always Explicit
+
 ```typescript
 // Always define props interface, even if simple
 interface ItemCardProps {
@@ -265,42 +269,46 @@ export function ItemCard({ item, onClick }: ItemCardProps): JSX.Element {
 ## State Management
 
 ### Local State First
+
 ```typescript
 // Start with useState, escalate only when needed
-const [value, setValue] = useState('');
+const [value, setValue] = useState("");
 ```
 
 ### Zustand for Global State (if needed)
+
 ```typescript
 // store/useAppStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface AppState {
   user: User | null;
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   setUser: (user: User | null) => void;
   toggleTheme: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   user: null,
-  theme: 'light',
+  theme: "light",
   setUser: (user) => set({ user }),
-  toggleTheme: () => set((state) => ({
-    theme: state.theme === 'light' ? 'dark' : 'light'
-  })),
+  toggleTheme: () =>
+    set((state) => ({
+      theme: state.theme === "light" ? "dark" : "light",
+    })),
 }));
 ```
 
 ### React Query for Server State
+
 ```typescript
 // api/queries/useItems.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { itemsApi } from '../client';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { itemsApi } from "../client";
 
 export function useItems() {
   return useQuery({
-    queryKey: ['items'],
+    queryKey: ["items"],
     queryFn: itemsApi.getAll,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -312,7 +320,7 @@ export function useCreateItem() {
   return useMutation({
     mutationFn: itemsApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
     },
   });
 }
@@ -323,6 +331,7 @@ export function useCreateItem() {
 ## Routing
 
 ### React Router (Vite/CRA)
+
 ```typescript
 // App.tsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -341,6 +350,7 @@ export function App(): JSX.Element {
 ```
 
 ### Protected Routes
+
 ```typescript
 interface ProtectedRouteProps {
   children: JSX.Element;
@@ -363,6 +373,7 @@ function ProtectedRoute({ children }: ProtectedRouteProps): JSX.Element {
 ## Styling
 
 ### CSS Modules (Preferred)
+
 ```typescript
 // Button.module.css
 .primary {
@@ -382,6 +393,7 @@ import styles from './Button.module.css';
 ```
 
 ### Tailwind (Alternative)
+
 ```typescript
 // Use consistent patterns, extract repeated combinations
 const buttonVariants = {
@@ -397,6 +409,7 @@ const buttonVariants = {
 ## Forms
 
 ### React Hook Form + Zod
+
 ```typescript
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -437,6 +450,7 @@ export function LoginForm(): JSX.Element {
 ## Testing
 
 ### Component Testing with React Testing Library
+
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Button } from './Button';
@@ -469,12 +483,13 @@ describe('Button', () => {
 ```
 
 ### Hook Testing
-```typescript
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useCounter } from './useCounter';
 
-describe('useCounter', () => {
-  it('increments counter', () => {
+```typescript
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { useCounter } from "./useCounter";
+
+describe("useCounter", () => {
+  it("increments counter", () => {
     const { result } = renderHook(() => useCounter());
 
     act(() => {
@@ -487,19 +502,20 @@ describe('useCounter', () => {
 ```
 
 ### E2E with Playwright
+
 ```typescript
 // tests/e2e/login.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('user can login', async ({ page }) => {
-  await page.goto('/login');
+test("user can login", async ({ page }) => {
+  await page.goto("/login");
 
-  await page.fill('[name="email"]', 'test@example.com');
-  await page.fill('[name="password"]', 'password123');
+  await page.fill('[name="email"]', "test@example.com");
+  await page.fill('[name="password"]', "password123");
   await page.click('button[type="submit"]');
 
-  await expect(page).toHaveURL('/dashboard');
-  await expect(page.getByText('Welcome')).toBeVisible();
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.getByText("Welcome")).toBeVisible();
 });
 ```
 
@@ -508,6 +524,7 @@ test('user can login', async ({ page }) => {
 ## Performance
 
 ### Memoization
+
 ```typescript
 // Memoize expensive components
 const ItemList = memo(function ItemList({ items }: ItemListProps) {
@@ -526,6 +543,7 @@ const sortedItems = useMemo(() => {
 ```
 
 ### Code Splitting
+
 ```typescript
 // Lazy load routes
 const ItemPage = lazy(() => import('./pages/Item'));
@@ -551,7 +569,6 @@ const ItemPage = lazy(() => import('./pages/Item'));
 - ❌ Large components (>100 lines) - split into smaller pieces
 - ❌ CSS in JS objects - use CSS modules or Tailwind
 - ❌ Ignoring TypeScript errors - fix them
-
 
 <!-- 技能内容概览：
 1. 测试优先开发 (Test-First Development) - 必须先编写测试文件，再实现代码
