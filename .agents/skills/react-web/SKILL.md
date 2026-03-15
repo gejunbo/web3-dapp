@@ -551,3 +551,22 @@ const ItemPage = lazy(() => import('./pages/Item'));
 - ❌ Large components (>100 lines) - split into smaller pieces
 - ❌ CSS in JS objects - use CSS modules or Tailwind
 - ❌ Ignoring TypeScript errors - fix them
+
+
+<!-- 技能内容概览：
+1. 测试优先开发 (Test-First Development) - 必须先编写测试文件，再实现代码
+2. 项目结构 - 清晰的目录组织，包括 core、components、pages、hooks 等
+3. 组件模式 - 函数组件、逻辑提取到 hooks、显式的 props 接口
+4. 状态管理 - 优先使用本地状态，全局状态使用 Zustand，服务端状态使用 React Query
+5. 路由 - React Router 配置和受保护路由
+6. 样式 - CSS Modules 和 Tailwind 方案
+7. 表单 - React Hook Form + Zod 验证
+8. 测试 - React Testing Library 和 Playwright E2E 测试
+9. 性能优化 - 记忆化、代码分割等
+10. 反模式 - 避免的常见错误实践
+核心原则：
+
+- 测试先行 (测试文件必须在实现文件之前创建)
+- 逻辑与 UI 分离
+- 类型安全
+- 性能优化 -->
