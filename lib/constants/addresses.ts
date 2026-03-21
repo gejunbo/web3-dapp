@@ -11,6 +11,8 @@ export const TOKEN_ADDRESSES: Record<number, Record<string, string | undefined>>
     REWARD_TOKEN: process.env.NEXT_PUBLIC_REWARD_TOKEN_ADDRESS,
     TOKEN_A: process.env.NEXT_PUBLIC_TOKEN_A_ADDRESS,
     TOKEN_B: process.env.NEXT_PUBLIC_TOKEN_B_ADDRESS,
+    TOKEN_C: process.env.NEXT_PUBLIC_TOKEN_C_ADDRESS,
+    TOKEN_D: process.env.NEXT_PUBLIC_TOKEN_D_ADDRESS,
     PAYMENT_TOKEN: process.env.NEXT_PUBLIC_PAYMENT_TOKEN_ADDRESS,
   },
 };
@@ -45,6 +47,18 @@ export const TOKENS: Record<string, TokenConfig> = {
     name: 'Token B',
     decimals: 18,
     getAddress: (chainId: number) => TOKEN_ADDRESSES[chainId]?.TOKEN_B,
+  },
+  TKC: {
+    symbol: 'TKC',
+    name: 'Token C',
+    decimals: 18,
+    getAddress: (chainId: number) => TOKEN_ADDRESSES[chainId]?.TOKEN_C,
+  },
+  TKD: {
+    symbol: 'TKD',
+    name: 'Token D',
+    decimals: 18,
+    getAddress: (chainId: number) => TOKEN_ADDRESSES[chainId]?.TOKEN_D,
   },
   DRT: {
     symbol: 'DRT',
