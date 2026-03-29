@@ -21,11 +21,7 @@ import {
 } from "wagmi";
 import { parseUnits, formatUnits } from "@/lib/utils/units";
 import ApproveButton from "@/components/ApproveButton";
-import {
-  TOKENS,
-  getTokenAddress,
-  getProtocolAddress,
-} from "@/lib/constants/addresses";
+import { getTokenAddress, getProtocolAddress } from "@/lib/constants/addresses";
 import { SWAP_ABI, ERC20_ABI } from "@/lib/abis";
 
 // 池子数据接口
@@ -72,8 +68,6 @@ export default function PoolPage(): React.ReactElement {
   const [isMockMode, setIsMockMode] = useState<boolean>(false);
   // 池子数据
   const [poolData, setPoolData] = useState<PoolData | null>(null);
-  // TKA 是否已授权
-  const [tokenAApproved, setTokenAApproved] = useState<boolean>(false);
 
   // ===== 合约数据读取 =====
 
@@ -81,7 +75,11 @@ export default function PoolPage(): React.ReactElement {
    * 读取流动性池储备量
    * 返回 [reserveA, reserveB] 两个代币的储备量
    */
-  const { data: reserves, isError: reservesError } = useReadContract({
+  const {
+    data: reserves,
+    isError: reservesError,
+    refetch: refetchReserves,
+  } = useReadContract({
     address: swapAddress,
     abi: SWAP_ABI,
     functionName: "getReserves",
@@ -93,7 +91,7 @@ export default function PoolPage(): React.ReactElement {
   /**
    * 读取用户 LP 代币余额
    */
-  const { data: lpBalance } = useReadContract({
+  const { data: lpBalance, refetch: refetchLPBalance } = useReadContract({
     address: swapAddress,
     abi: SWAP_ABI,
     functionName: "balanceOf",
@@ -106,7 +104,7 @@ export default function PoolPage(): React.ReactElement {
   /**
    * 读取用户 TKA 余额
    */
-  const { data: balanceTKA } = useReadContract({
+  const { data: balanceTKA, refetch: refetchBalanceTKA } = useReadContract({
     address: tokenAAddress,
     abi: ERC20_ABI,
     functionName: "balanceOf",
@@ -119,7 +117,7 @@ export default function PoolPage(): React.ReactElement {
   /**
    * 读取用户 TKB 余额
    */
-  const { data: balanceTKB } = useReadContract({
+  const { data: balanceTKB, refetch: refetchBalanceTKB } = useReadContract({
     address: tokenBAddress,
     abi: ERC20_ABI,
     functionName: "balanceOf",
@@ -199,7 +197,12 @@ export default function PoolPage(): React.ReactElement {
       return;
     }
 
-    if (reserves && Array.isArray(reserves) && reserves[0] > 0n && reserves[1] > 0n) {
+    if (
+      reserves &&
+      Array.isArray(reserves) &&
+      reserves[0] > 0n &&
+      reserves[1] > 0n
+    ) {
       // 使用实际储备比例计算
       const reserveA = Number(reserves[0]) / 1e18;
       const reserveB = Number(reserves[1]) / 1e18;
@@ -212,6 +215,51 @@ export default function PoolPage(): React.ReactElement {
       setAmountB(calculatedB.toFixed(6));
     }
   }, [amountA, reserves, mode]);
+
+  /**
+   * 添加流动性成功后刷新数据
+   * 刷新余额、储备量和清空输入框
+   */
+  useEffect(() => {
+    if (isAddSuccess) {
+      // 刷新所有相关数据
+      refetchBalanceTKA();
+      refetchBalanceTKB();
+      refetchLPBalance();
+      refetchReserves();
+      // 清空输入框
+      setAmountA("");
+      setAmountB("");
+    }
+  }, [
+    isAddSuccess,
+    refetchBalanceTKA,
+    refetchBalanceTKB,
+    refetchLPBalance,
+    refetchReserves,
+  ]);
+
+  /**
+   * 移除流动性成功后刷新数据
+   * 刷新余额、储备量和清空输入框
+   */
+  useEffect(() => {
+    if (isRemoveSuccess) {
+      // 刷新所有相关数据
+      refetchBalanceTKA();
+      refetchBalanceTKB();
+      refetchLPBalance();
+      refetchReserves();
+      // 清空输入框
+      setLpAmount("");
+    }
+  }, [
+    isRemoveSuccess,
+    refetchBalanceTKA,
+    refetchBalanceTKB,
+    refetchLPBalance,
+    refetchReserves,
+  ]);
 
   // ===== 计算函数 =====
 
@@ -501,7 +549,6 @@ export default function PoolPage(): React.ReactElement {
                 tokenAddress={tokenAAddress}
                 spenderAddress={swapAddress}
                 amount={amountA ? parseUnits(amountA, 18) : BigInt(0)}
-                onApproved={() => setTokenAApproved(true)}
                 disabled={!amountA || !amountB || isAdding || isAddConfirming}
               >
                 <ApproveButton
@@ -512,7 +559,9 @@ export default function PoolPage(): React.ReactElement {
                 >
                   <button
                     onClick={handleAddLiquidity}
-                    disabled={!amountA || !amountB || isAdding || isAddConfirming}
+                    disabled={
+                      !amountA || !amountB || isAdding || isAddConfirming
+                    }
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                   >
                     {isAdding || isAddConfirming
@@ -526,9 +575,7 @@ export default function PoolPage(): React.ReactElement {
             {/* 成功消息 */}
             {isAddSuccess && (
               <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-800 font-semibold">
-                  流动性添加成功！
-                </p>
+                <p className="text-green-800 font-semibold">流动性添加成功！</p>
                 <a
                   href={`https://sepolia.etherscan.io/tx/${addHash}`}
                   target="_blank"
@@ -636,9 +683,7 @@ export default function PoolPage(): React.ReactElement {
             {/* 成功消息 */}
             {isRemoveSuccess && (
               <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-800 font-semibold">
-                  流动性移除成功！
-                </p>
+                <p className="text-green-800 font-semibold">流动性移除成功！</p>
                 <a
                   href={`https://sepolia.etherscan.io/tx/${removeHash}`}
                   target="_blank"
