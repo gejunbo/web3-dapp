@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   useAccount,
   useReadContract,
@@ -68,6 +68,8 @@ export default function PoolPage(): React.ReactElement {
   const [isMockMode, setIsMockMode] = useState<boolean>(false);
   // 池子数据
   const [poolData, setPoolData] = useState<PoolData | null>(null);
+  // 跟踪最后一次修改的输入框，避免无限循环
+  const lastModifiedInput = useRef<"A" | "B" | null>(null);
 
   // ===== 合约数据读取 =====
 
@@ -189,31 +191,59 @@ export default function PoolPage(): React.ReactElement {
   }, [swapAddress, reservesError]);
 
   /**
-   * 自动计算 Token B 数量
-   * 当 Token A 数量变化时，根据储备比例自动计算 Token B
+   * 双向联动自动计算
+   * - 修改 TKA 时自动计算 TKB
+   * - 修改 TKB 时自动计算 TKA
    */
   useEffect(() => {
-    if (mode !== "add" || !amountA || parseFloat(amountA) <= 0) {
+    if (mode !== "add") {
       return;
     }
 
-    if (reserves && Array.isArray(reserves)) {
-      const [reserve0, reserve1] = reserves as [bigint, bigint];
-      if (reserve0 > 0n && reserve1 > 0n) {
-        // 使用实际储备比例计算
-        const reserveA = Number(reserve0) / 1e18;
-        const reserveB = Number(reserve1) / 1e18;
-        const ratio = reserveB / reserveA;
-        const calculatedB = parseFloat(amountA) * ratio;
-        setAmountB(calculatedB.toFixed(6));
-        return;
+    // 用户修改了 TKA，计算 TKB
+    if (
+      lastModifiedInput.current === "A" &&
+      amountA &&
+      parseFloat(amountA) > 0
+    ) {
+      if (reserves && Array.isArray(reserves)) {
+        const [reserve0, reserve1] = reserves as [bigint, bigint];
+        if (reserve0 > 0n && reserve1 > 0n) {
+          const reserveA = Number(reserve0) / 1e18;
+          const reserveB = Number(reserve1) / 1e18;
+          const ratio = reserveB / reserveA;
+          const calculatedB = parseFloat(amountA) * ratio;
+          setAmountB(calculatedB.toFixed(6));
+          return;
+        }
       }
+      const calculatedB = parseFloat(amountA) * 1.5;
+      setAmountB(calculatedB.toFixed(6));
+      return;
     }
 
-    // 模拟模式：使用 1:1.5 固定比例
-    const calculatedB = parseFloat(amountA) * 1.5;
-    setAmountB(calculatedB.toFixed(6));
-  }, [amountA, reserves, mode]);
+    // 用户修改了 TKB，计算 TKA
+    if (
+      lastModifiedInput.current === "B" &&
+      amountB &&
+      parseFloat(amountB) > 0
+    ) {
+      if (reserves && Array.isArray(reserves)) {
+        const [reserve0, reserve1] = reserves as [bigint, bigint];
+        if (reserve0 > 0n && reserve1 > 0n) {
+          const reserveA = Number(reserve0) / 1e18;
+          const reserveB = Number(reserve1) / 1e18;
+          const ratio = reserveA / reserveB; // 反向比例
+          const calculatedA = parseFloat(amountB) * ratio;
+          setAmountA(calculatedA.toFixed(6));
+          return;
+        }
+      }
+      const calculatedA = parseFloat(amountB) / 1.5;
+      setAmountA(calculatedA.toFixed(6));
+      return;
+    }
+  }, [amountA, amountB, reserves, mode]);
 
   /**
    * 添加流动性成功后刷新数据
@@ -344,6 +374,7 @@ export default function PoolPage(): React.ReactElement {
    */
   const handleMaxTKA = (): void => {
     if (balanceTKA) {
+      lastModifiedInput.current = "A";
       setAmountA(formatUnits(balanceTKA as bigint | string, 18, 6));
     }
   };
@@ -353,6 +384,7 @@ export default function PoolPage(): React.ReactElement {
    */
   const handleMaxTKB = (): void => {
     if (balanceTKB) {
+      lastModifiedInput.current = "B";
       setAmountB(formatUnits(balanceTKB as bigint | string, 18, 6));
     }
   };
@@ -459,7 +491,10 @@ export default function PoolPage(): React.ReactElement {
                   <input
                     type="number"
                     value={amountA}
-                    onChange={(e) => setAmountA(e.target.value)}
+                    onChange={(e) => {
+                      lastModifiedInput.current = "A";
+                      setAmountA(e.target.value);
+                    }}
                     placeholder="0.0"
                     className="flex-1 text-2xl font-semibold bg-transparent outline-none"
                   />
@@ -508,7 +543,10 @@ export default function PoolPage(): React.ReactElement {
                   <input
                     type="number"
                     value={amountB}
-                    onChange={(e) => setAmountB(e.target.value)}
+                    onChange={(e) => {
+                      lastModifiedInput.current = "B";
+                      setAmountB(e.target.value);
+                    }}
                     placeholder="0.0"
                     className="flex-1 text-2xl font-semibold bg-transparent outline-none"
                   />
