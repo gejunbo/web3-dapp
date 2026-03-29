@@ -197,23 +197,22 @@ export default function PoolPage(): React.ReactElement {
       return;
     }
 
-    if (
-      reserves &&
-      Array.isArray(reserves) &&
-      reserves[0] > 0n &&
-      reserves[1] > 0n
-    ) {
-      // 使用实际储备比例计算
-      const reserveA = Number(reserves[0]) / 1e18;
-      const reserveB = Number(reserves[1]) / 1e18;
-      const ratio = reserveB / reserveA;
-      const calculatedB = parseFloat(amountA) * ratio;
-      setAmountB(calculatedB.toFixed(6));
-    } else {
-      // 模拟模式：使用 1:1.5 固定比例
-      const calculatedB = parseFloat(amountA) * 1.5;
-      setAmountB(calculatedB.toFixed(6));
+    if (reserves && Array.isArray(reserves)) {
+      const [reserve0, reserve1] = reserves as [bigint, bigint];
+      if (reserve0 > 0n && reserve1 > 0n) {
+        // 使用实际储备比例计算
+        const reserveA = Number(reserve0) / 1e18;
+        const reserveB = Number(reserve1) / 1e18;
+        const ratio = reserveB / reserveA;
+        const calculatedB = parseFloat(amountA) * ratio;
+        setAmountB(calculatedB.toFixed(6));
+        return;
+      }
     }
+
+    // 模拟模式：使用 1:1.5 固定比例
+    const calculatedB = parseFloat(amountA) * 1.5;
+    setAmountB(calculatedB.toFixed(6));
   }, [amountA, reserves, mode]);
 
   /**
@@ -273,15 +272,16 @@ export default function PoolPage(): React.ReactElement {
     }
 
     const lpAmountBig = parseUnits(lpAmount, 18);
-    const lpBalanceBig = BigInt(lpBalance);
+    const lpBalanceBig = BigInt(lpBalance as bigint | string);
 
     if (lpAmountBig > lpBalanceBig) {
       return { amountA: "0", amountB: "0" };
     }
 
     // 计算按比例可获得的代币数量
-    const reserveA = BigInt(reserves[0]);
-    const reserveB = BigInt(reserves[1]);
+    const [reserve0, reserve1] = reserves as [bigint, bigint];
+    const reserveA = BigInt(reserve0);
+    const reserveB = BigInt(reserve1);
 
     // 公式: (lpAmount / totalLP) * reserve
     const amountABig = (lpAmountBig * reserveA) / lpBalanceBig;
@@ -335,7 +335,7 @@ export default function PoolPage(): React.ReactElement {
    */
   const handleMaxLP = (): void => {
     if (lpBalance) {
-      setLpAmount(formatUnits(lpBalance, 18, 6));
+      setLpAmount(formatUnits(lpBalance as bigint | string, 18, 6));
     }
   };
 
@@ -344,7 +344,7 @@ export default function PoolPage(): React.ReactElement {
    */
   const handleMaxTKA = (): void => {
     if (balanceTKA) {
-      setAmountA(formatUnits(balanceTKA, 18, 6));
+      setAmountA(formatUnits(balanceTKA as bigint | string, 18, 6));
     }
   };
 
@@ -353,7 +353,7 @@ export default function PoolPage(): React.ReactElement {
    */
   const handleMaxTKB = (): void => {
     if (balanceTKB) {
-      setAmountB(formatUnits(balanceTKB, 18, 6));
+      setAmountB(formatUnits(balanceTKB as bigint | string, 18, 6));
     }
   };
 
@@ -449,7 +449,10 @@ export default function PoolPage(): React.ReactElement {
                     onClick={handleMaxTKA}
                     className="text-sm text-blue-600 hover:underline"
                   >
-                    余额: {balanceTKA ? formatUnits(balanceTKA, 18, 4) : "0"}
+                    余额:{" "}
+                    {balanceTKA
+                      ? formatUnits(balanceTKA as bigint | string, 18, 4)
+                      : "0"}
                   </button>
                 </div>
                 <div className="flex items-center gap-3">
@@ -495,7 +498,10 @@ export default function PoolPage(): React.ReactElement {
                     onClick={handleMaxTKB}
                     className="text-sm text-blue-600 hover:underline"
                   >
-                    余额: {balanceTKB ? formatUnits(balanceTKB, 18, 4) : "0"}
+                    余额:{" "}
+                    {balanceTKB
+                      ? formatUnits(balanceTKB as bigint | string, 18, 4)
+                      : "0"}
                   </button>
                 </div>
                 <div className="flex items-center gap-3">
@@ -601,7 +607,10 @@ export default function PoolPage(): React.ReactElement {
                     onClick={handleMaxLP}
                     className="text-sm text-blue-600 hover:underline"
                   >
-                    余额: {lpBalance ? formatUnits(lpBalance, 18, 4) : "0"}
+                    余额:{" "}
+                    {lpBalance
+                      ? formatUnits(lpBalance as bigint | string, 18, 4)
+                      : "0"}
                   </button>
                 </div>
                 <div className="flex items-center gap-3">
