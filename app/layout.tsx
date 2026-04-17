@@ -4,18 +4,12 @@
  */
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-// 配置 Geist Sans 字体
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-// 配置 Geist Mono 等宽字体
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// 配置 Inter 字体
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -39,9 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${inter.variable} antialiased`}>
         <ClientProviders>
           {children}
         </ClientProviders>
